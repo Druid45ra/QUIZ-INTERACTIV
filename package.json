@@ -1,0 +1,12 @@
+{
+  "name": "quiz-interactiv",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "sqlite3": "^5.1.7"
+  }
+}

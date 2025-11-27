@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ro">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Quiz Interactiv — Modern (Dark mode)</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap">
+
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --accent: #6366f1;
+            --success: #16a34a;
+            --danger: #ef4444;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0b1220;
+            --card: #0f1724;
+            --text: #e6eef8;
+            --muted: #94a3b8;
+            --accent: #7c3aed;
+            --success: #34d399;
+            --danger: #f87171;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .focus-ring:focus {
+            outline: 0;
+            box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.08);
+        }
+
+        /* elevated card */
+        .card-glow {
+            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.12), 0 2px 6px rgba(2, 6, 23, 0.06);
+        }
+
+        /* progress transition */
+        .progress-transition {
+            transition: width 420ms cubic-bezier(.2, .9, .3, 1);
+        }
+
+        /* answer animations - more complex */
+        .motion-enter {
+            transform: translateY(18px) scale(0.98);
+            opacity: 0;
+        }
+
+        .motion-enter.motion-show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            transition: transform 360ms cubic-bezier(.2, .9, .3, 1), opacity 360ms ease;
+        }
+
+        .motion-pop {
+            animation: pop-in 420ms cubic-bezier(.2, .9, .3, 1);
+        }
+
+        @keyframes pop-in {
+            0% {
+                transform: translateY(6px) scale(0.98);
+                opacity: 0;
+            }
+
+            60% {
+                transform: translateY(-6px) scale(1.02);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* slide-in container */
+        .slide-left {
+            transform: translateX(12px);
+            opacity: 0;
+        }
+
+        .slide-left.show {
+            transform: translateX(0);
+            opacity: 1;
+            transition: all 420ms cubic-bezier(.2, .9, .3, 1);
+        }
+
+        /* coloring for correct/wrong */
+        .is-correct {
+            border-color: rgba(52, 211, 153, 0.18);
+            background: linear-gradient(90deg, rgba(52, 211, 153, 0.06), transparent);
+        }
+
+        .is-wrong {
+            border-color: rgba(248, 113, 113, 0.14);
+            background: linear-gradient(90deg, rgba(248, 113, 113, 0.04), transparent);
+        }
+    </style>
+
+    <meta name="description" content="Quiz modern — dark mode, export CSV, API save, animații" />
+</head>
+
+<body data-theme="light" class="min-h-screen flex items-center justify-center p-6">
+    <main class="w-full max-w-4xl card card-glow rounded-2xl overflow-hidden border">
+        <!-- Header -->
+        <header class="p-6 border-b flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold">Quiz Interactiv — Modern</h1>
+                <p class="text-sm text-[color:var(--muted)] mt-1">Feedback instant — timer — scor avansat — review final
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="text-sm text-[color:var(--muted)]">Highscore: <span id="best-score">—</span></div>
+
+                <!-- Dark mode toggle -->
+                <button id="theme-toggle" class="px-3 py-2 rounded-lg border focus-ring" title="Comută tema dark/light">
+                    🌙
+                </button>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <section id="quiz-root" class="p-6">
+            <!-- Start -->
+            <div id="start-screen" class="space-y-4 slide-left">
+                <p class="text-base">Bine ai venit! Alege modul și setările.</p>
+
+                <div class="flex flex-wrap gap-3">
+                    <button id="start-btn"
+                        class="px-5 py-3 bg-[color:var(--accent)] text-white rounded-lg hover:opacity-95 focus-ring">Începe
+                        Quiz</button>
+                    <button id="practice-btn" class="px-5 py-3 border rounded-lg focus-ring">Mod Practică</button>
+                    <button id="shuffle-btn" class="px-5 py-3 border rounded-lg focus-ring">Amestecă
+                        Întrebările</button>
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-[color:var(--card)] rounded-lg border">
+                        <div class="text-xs text-[color:var(--muted)]">Timp per întrebare</div>
+                        <div class="mt-2 flex items-center gap-2">
+                            <input id="time-per-q" type="number" min="5" max="600" value="30"
+                                class="w-20 px-2 py-1 border rounded focus-ring bg-transparent" />
+                            <div class="text-sm text-[color:var(--muted)]">secunde</div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-[color:var(--card)] rounded-lg border">
+                        <div class="text-xs text-[color:var(--muted)]">Număr întrebări</div>
+                        <div class="mt-2">
+                            <input id="num-questions" type="number" min="3" max="50" value="8"
+                                class="w-24 px-2 py-1 border rounded focus-ring bg-transparent" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-xs text-[color:var(--muted)] mt-3">Scor = puncte corecte + bonus viteză + streak. Se
+                    salvează local highscore.</div>
+            </div>
+
+            <!-- Quiz -->
+            <div id="question-screen" class="hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <div class="text-sm text-[color:var(--muted)]">Întrebarea <span
+                                id="current-index">1</span>/<span id="total-questions">8</span></div>
+                        <div id="progress-bar"
+                            class="w-72 bg-[color:var(--card)] h-2 rounded-full mt-2 overflow-hidden border">
+                            <div id="progress-fill" class="h-full bg-[color:var(--accent)] w-0 progress-transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-right">
+                        <div class="text-sm">Scor: <span id="score">0</span></div>
+                        <div class="text-xs text-[color:var(--muted)]">Corecte: <span id="correct-count">0</span> |
+                            Greșite: <span id="wrong-count">0</span></div>
+                    </div>
+                </div>
+
+                <article class="p-6 rounded-xl border card">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 id="question-text" class="text-lg font-medium">Întrebarea apare aici</h2>
+                        <div class="text-xs text-[color:var(--muted)] text-right">
+                            <div>Total timp: <span id="total-timer">00:00</span></div>
+                            <div>Rămase: <span id="q-timer">00</span>s</div>
+                        </div>
+                    </div>
+
+                    <div id="answers" class="grid grid-cols-1 gap-3"></div>
+
+                    <div id="feedback" class="mt-4 text-sm min-h-[1.2rem]"></div>
+
+                    <div class="mt-6 flex justify-between items-center">
+                        <button id="next-btn"
+                            class="px-4 py-2 bg-[color:var(--success)] text-white rounded-lg hidden">Următoarea</button>
+                        <div class="flex gap-3">
+                            <button id="quit-btn" class="px-3 py-2 border rounded-lg">Renunță</button>
+                            <button id="restart-btn" class="px-3 py-2 border rounded-lg hidden">Reîncepe</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Results -->
+            <div id="result-screen" class="hidden p-6 text-center">
+                <h3 class="text-2xl font-semibold mb-3">Felicitări — ai terminat!</h3>
+                <p class="text-base mb-2">Scor final: <span id="final-score">0</span> (<span
+                        id="final-percent">0</span>%)</p>
+                <p id="result-message" class="mb-4 text-[color:var(--muted)]"></p>
+
+                <div id="review-list" class="max-h-64 overflow-auto space-y-3 text-left mb-4"></div>
+
+                <div class="flex justify-center gap-3 mb-3">
+                    <button id="retry-btn" class="px-4 py-2 bg-[color:var(--accent)] text-white rounded-lg">Încearcă din
+                        nou</button>
+                    <button id="back-btn" class="px-4 py-2 border rounded-lg">Înapoi la început</button>
+                </div>
+
+                <div class="flex justify-center gap-3">
+                    <button id="export-csv" class="px-4 py-2 border rounded-lg">Export CSV</button>
+                    <button id="send-server" class="px-4 py-2 border rounded-lg">Trimite pe server</button>
+                    <span id="server-status" class="text-xs text-[color:var(--muted)] pl-2"></span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Questions and logic -->
+    <script src="/questions.js"></script>
+    <script src="/script.js"></script>
+</body>
+
+</html>
